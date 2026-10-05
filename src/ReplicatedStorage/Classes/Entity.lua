@@ -1,3 +1,6 @@
+-- Discord: @master.boot.record
+-- Roblox: @BusyJesu
+
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -49,6 +52,7 @@ end
 function Entity._playAnimation(self, Animation, AdjustSpeed)
 	if self.Model and Animation then
 		local AnimationController = self.Model:FindFirstChildOfClass("AnimationController")
+		if not AnimationController then return nil end
 		local Animator = AnimationController:FindFirstChildOfClass("Animator")
 			or Instance.new("Animator", AnimationController)
 		
@@ -80,7 +84,7 @@ function Entity._createModel(self)
 		self.Model.Parent = workspace.Enemies
 		self.Maid:GiveTask(self.Model)
 	end
-	
+	if not self.Model then return end
 	local WalkAnimation = self.Model.Animations:FindFirstChild("Walk")
 	if WalkAnimation then
 		local Animation = WalkAnimation:IsA("Folder") and WalkAnimation:GetChildren()[math.random(1, #WalkAnimation:GetChildren())] or WalkAnimation
@@ -175,7 +179,9 @@ function Entity.UpdateSpeed(self)
 		self.SlownessDebuff,
 		self.StunDebuff,
 		}) do
-		debuffs += perc
+		if perc and typeof(perc) == "number" then
+			debuffs += perc
+		end
 	end
 	self.Speed = math.clamp(self.BaseSpeed - (self.BaseSpeed * (debuffs / 100)), 0, math.huge)
 	self.Replicator:set("Speed", self.Speed)

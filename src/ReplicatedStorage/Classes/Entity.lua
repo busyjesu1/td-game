@@ -1,5 +1,5 @@
--- Discord: @master.boot.record
--- Roblox: @BusyJesu
+-- Discord: @master.boot.record (729856613858410547)
+-- Roblox: @BusyJesu (816207506)
 
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

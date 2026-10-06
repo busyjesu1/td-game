@@ -1,11 +1,12 @@
 -- Discord: @master.boot.record (729856613858410547)
 -- Roblox: @BusyJesu (816207506)
 
+--Services
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
-
+--Packages/Modules
 local Maid = require(ReplicatedStorage.Packages.Maid)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Debuffs = require(ReplicatedStorage.Shared.Debuffs)
@@ -17,24 +18,24 @@ local NPCReplicate = Packets.NPCReplicate
 
 local Entity = {}
 Entity.__index = Entity
-
+-- Constructor. Builds the server or client half, then the parts both sides share.
 function Entity.new(props)
 	local self = setmetatable({}, Entity)
 	
 	self.Maid = Maid.new()
 	
-	if RunService:IsServer() then
+	if RunService:IsServer() then -- Server creates the authoritative entity
 		self:_initServer(props)
 	else
 		self:_initClient(props)
 	end
 	
 	self.Path = PathController.Paths[self.PathNumber]
-	self.Debuffs = Debuffs.new(self)
+	self.Debuffs = Debuffs.new(self) 
 	self.Modifiers = Modifiers.new(self)
 	
-	self.Maid:GiveTask(self.Modifiers)
-	self.Maid:GiveTask(self.Debuffs)
+	self.Maid:GiveTask(self.Modifiers) -- Maid calls :Destroy() on it during cleanup
+	self.Maid:GiveTask(self.Debuffs) -- Maid calls :Destroy() on it during cleanup
 	self.Maid:GiveTask(function()
 		if self.Replicator then
 			self.Replicator:Destroy()
@@ -42,13 +43,13 @@ function Entity.new(props)
 		end
 	end)
 	
-	if self.Initialize then
+	if self.Initialize then -- Optional hook defined by a controller
 		self:Initialize()
 	end
 	
 	return self
 end
-
+-- Plays an animation on the model
 function Entity._playAnimation(self, Animation, AdjustSpeed)
 	if self.Model and Animation then
 		local AnimationController = self.Model:FindFirstChildOfClass("AnimationController")
@@ -75,7 +76,7 @@ function Entity._playAnimation(self, Animation, AdjustSpeed)
 		return Track
 	end
 end
-
+-- Clones the visual model and starts its walk animation.
 function Entity._createModel(self)
 	local EntityModel = ReplicatedStorage.Assets[self.Type]:FindFirstChild(self.Name)
 	if EntityModel then
@@ -94,7 +95,7 @@ function Entity._createModel(self)
 	local Origin = self.Model.PrimaryPart:FindFirstChild("Origin") or self.Model.PrimaryPart:FindFirstChild("Node")
 	self.Height = -Origin.Position.Y
 end
-
+-- Client constructor
 function Entity._initClient(self, props)
 	self.RootPointer = props.RootPointer
 	self.Replicator = AttributeReplicator.new(props.RootPointer)
@@ -109,7 +110,7 @@ function Entity._initClient(self, props)
 		
 	self:_createModel()
 end
-
+-- Server constructor
 function Entity._initServer(self, props)
 	local ID = props.ID or HttpService:GenerateGUID(false)
 	local RootPointer = Instance.new("Folder")
@@ -167,11 +168,11 @@ function Entity._initServer(self, props)
 		end
 	end)
 end
-
+-- True while the entity still has a Replicator
 function Entity.IsAlive(self)
 	return self.Replicator ~= nil and self.Health > 0
 end
-
+-- Recalculates Speed from BaseSpeed
 function Entity.UpdateSpeed(self)
 	local debuffs = 0
 	for _, perc in pairs({
@@ -187,6 +188,7 @@ function Entity.UpdateSpeed(self)
 	self.Replicator:set("Speed", self.Speed)
 end
 
+-- Server: broadcasts an action for this entity. Client: runs that action locally.
 function Entity.Replicate(self, Action, ...)
 	if RunService:IsServer() then
 		NPCReplicate:Fire(Action, self.ID, {...})
@@ -205,6 +207,7 @@ function Entity.Damage(self, Origin, Amount)
 	end
 end
 
+-- Called every frame on server and client: moves the entity along its path.
 function Entity.Update(self, deltaTime)
 	
 	if not self.Stopped and self.Path then
@@ -237,6 +240,7 @@ function Entity.Update(self, deltaTime)
 	end
 end
 
+-- Runs the death function, then releases everything the entity created.
 function Entity.Destroy(self)
 	if self.OnDeath then
 		self:OnDeath()
